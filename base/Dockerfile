@@ -1,4 +1,4 @@
-FROM frolvlad/alpine-oraclejdk8
+FROM frolvlad/alpine-oraclejdk8:slim
 
 MAINTAINER kgoutsos
 
@@ -7,7 +7,6 @@ ENV MAVEN_VERSION="3.3.3"
 
 RUN apk update && apk upgrade && \
     apk add --no-cache bash git openssh curl && \
-    mkdir -p /opt/devicehive && \
     cd /usr/share && \
     wget http://archive.apache.org/dist/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz -O - | tar xzf - && \
     mv /usr/share/apache-maven-$MAVEN_VERSION /usr/share/maven && \
@@ -15,6 +14,14 @@ RUN apk update && apk upgrade && \
 
 ENV MAVEN_HOME /usr/share/maven
 
-RUN git clone -b development https://github.com/devicehive/devicehive-java-server.git /opt/devicehive && \
-    cd /opt/devicehive && \
-    mvn clean package -Pbooted-rdbms,shim-kafka,!booted-riak -DskipTests
+RUN git clone -b development --depth=1 https://github.com/devicehive/devicehive-java-server.git /tmp/devicehive && \
+    cd /tmp/devicehive && \
+    mvn clean package -Pbooted-rdbms,shim-kafka,!booted-riak -DskipTests && \
+    mkdir -p /opt/devicehive/ && \
+    mv /tmp/devicehive/devicehive-backend/target/devicehive-backend-${DH_VERSION}-boot.jar /opt/devicehive/ && \
+    mv /tmp/devicehive/devicehive-frontend/target/devicehive-frontend-${DH_VERSION}-boot.jar /opt/devicehive/ && \
+    rm -rf /tmp/devicehive/ /root/.m2/
+
+VOLUME ["/var/log/devicehive"]
+
+WORKDIR /opt/devicehive/
